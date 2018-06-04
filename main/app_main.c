@@ -45,6 +45,7 @@
 #define EXAMPLE_ESP_WIFI_SSID CONFIG_ESP_WIFI_SSID
 #define EXAMPLE_ESP_WIFI_PASS CONFIG_ESP_WIFI_PASSWORD
 #define EXAMPLE_MAX_STA_CONN CONFIG_MAX_STA_CONN
+#define CAMERA_LED_GPIO 16
 
 #if EXAMPLE_ESP_WIFI_MODE_AP
 static void wifi_init_softap(void);
@@ -73,7 +74,7 @@ static ip4_addr_t s_ip_addr;
 static camera_pixelformat_t s_pixel_format;
 
 #define CAMERA_PIXEL_FORMAT CAMERA_PF_GRAYSCALE
-#define CAMERA_FRAME_SIZE CAMERA_FS_VGA
+#define CAMERA_FRAME_SIZE CAMERA_FS_SVGA
 
 
 void app_main()
@@ -88,6 +89,8 @@ void app_main()
     }
 
     ESP_ERROR_CHECK(gpio_install_isr_service(0));
+    gpio_set_direction(CAMERA_LED_GPIO, GPIO_MODE_OUTPUT);
+    gpio_set_level(CAMERA_LED_GPIO, 1);
 
     camera_config_t camera_config = {
         .ledc_channel = LEDC_CHANNEL_0,
@@ -167,6 +170,7 @@ void app_main()
         ESP_LOGI(TAG, "Open http://" IPSTR "/jpg for single image/jpg image", IP2STR(&s_ip_addr));
         ESP_ERROR_CHECK( http_register_handler(server, "/jpg_stream", HTTP_GET, HTTP_HANDLE_RESPONSE, &handle_jpg_stream, NULL) );
         ESP_LOGI(TAG, "Open http://" IPSTR "/jpg_stream for multipart/x-mixed-replace stream of JPEGs", IP2STR(&s_ip_addr));
+        ESP_ERROR_CHECK( http_register_handler(server, "/", HTTP_GET, HTTP_HANDLE_RESPONSE, &handle_jpg_stream, NULL) );
     }
     ESP_LOGI(TAG, "Free heap: %u", xPortGetFreeHeapSize());
     ESP_LOGI(TAG, "Camera demo ready");
