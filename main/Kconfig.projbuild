@@ -2,7 +2,7 @@ menu "ESP32 Camera Demo Configuration"
 
 choice ESP_WIFI_MODE
     prompt "AP or STA"
-    default ESP_WIFI_IS_STATION
+    default ESP_WIFI_IS_SOFTAP
     help
         Whether the esp32 is softAP or station.
 
@@ -19,13 +19,13 @@ config ESP_WIFI_MODE_AP
 
 config ESP_WIFI_SSID
     string "WiFi SSID"
-    default "myssid"
+    default "M5Cam"
     help
 	SSID (network name) for the example to connect to.
 
 config ESP_WIFI_PASSWORD
     string "WiFi Password"
-    default "mypassword"
+    default ""
     help
 	WiFi password (WPA or WPA2) for the example to use.
 		
