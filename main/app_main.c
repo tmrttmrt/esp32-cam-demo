@@ -53,6 +53,7 @@ static void wifi_init_softap(void);
 static void wifi_init_sta(void);
 #endif 
 
+static void set_camera_inuse(uint32_t level);
 static void handle_grayscale_pgm(http_context_t http_ctx, void* ctx);
 static void handle_rgb_bmp(http_context_t http_ctx, void* ctx);
 static void handle_rgb_bmp_stream(http_context_t http_ctx, void* ctx);
@@ -90,7 +91,7 @@ void app_main()
 
     ESP_ERROR_CHECK(gpio_install_isr_service(0));
     gpio_set_direction(CAMERA_LED_GPIO, GPIO_MODE_OUTPUT);
-    gpio_set_level(CAMERA_LED_GPIO, 1);
+    set_camera_inuse(1);
 
     camera_config_t camera_config = {
         .ledc_channel = LEDC_CHANNEL_0,
@@ -175,6 +176,13 @@ void app_main()
     ESP_LOGI(TAG, "Free heap: %u", xPortGetFreeHeapSize());
     ESP_LOGI(TAG, "Camera demo ready");
 
+    // turn off camera LED as it not yet operating
+    set_camera_inuse(0);
+}
+
+static void set_camera_inuse(uint32_t level)
+{
+    gpio_set_level(CAMERA_LED_GPIO, level);
 }
 
 static esp_err_t write_frame(http_context_t http_ctx)
@@ -189,7 +197,9 @@ static esp_err_t write_frame(http_context_t http_ctx)
 
 static void handle_grayscale_pgm(http_context_t http_ctx, void* ctx)
 {
+    set_camera_inuse(1);
     esp_err_t err = camera_run();
+    set_camera_inuse(0);
     if (err != ESP_OK) {
         ESP_LOGD(TAG, "Camera capture failed with error = %d", err);
         return;
@@ -214,7 +224,9 @@ static void handle_grayscale_pgm(http_context_t http_ctx, void* ctx)
 
 static void handle_rgb_bmp(http_context_t http_ctx, void* ctx)
 {
+    set_camera_inuse(1);
     esp_err_t err = camera_run();
+    set_camera_inuse(0);
     if (err != ESP_OK) {
         ESP_LOGD(TAG, "Camera capture failed with error = %d", err);
         return;
@@ -240,7 +252,9 @@ static void handle_rgb_bmp(http_context_t http_ctx, void* ctx)
 
 static void handle_jpg(http_context_t http_ctx, void* ctx)
 {
+    set_camera_inuse(1);
     esp_err_t err = camera_run();
+    set_camera_inuse(0);
     if (err != ESP_OK) {
         ESP_LOGD(TAG, "Camera capture failed with error = %d", err);
         return;
@@ -266,6 +280,7 @@ static void handle_rgb_bmp_stream(http_context_t http_ctx, void* ctx)
     };
 
 
+    set_camera_inuse(1);
     while (true) {
         esp_err_t err = camera_run();
         if (err != ESP_OK) {
@@ -291,6 +306,7 @@ static void handle_rgb_bmp_stream(http_context_t http_ctx, void* ctx)
             break;
         }
     }
+    set_camera_inuse(0);
 
     free(header);
     http_response_end(http_ctx);
@@ -300,6 +316,7 @@ static void handle_jpg_stream(http_context_t http_ctx, void* ctx)
 {
     http_response_begin(http_ctx, 200, STREAM_CONTENT_TYPE, HTTP_RESPONSE_SIZE_UNKNOWN);
 
+    set_camera_inuse(1);
     while (true) {
         esp_err_t err = camera_run();
         if (err != ESP_OK) {
@@ -320,6 +337,8 @@ static void handle_jpg_stream(http_context_t http_ctx, void* ctx)
             break;
         }
     }
+    set_camera_inuse(0);
+
     http_response_end(http_ctx);
 }
 
