@@ -154,6 +154,7 @@ void app_main()
 
     http_server_t server;
     http_server_options_t http_options = HTTP_SERVER_OPTIONS_DEFAULT();
+    http_options.task_affinity = 1; // pin http server to CORE 1 (at the same time CONFIG_ESP32_WIFI_TASK_PINNED_TO_CORE_0=y)
     ESP_ERROR_CHECK( http_server_start(&http_options, &server) );
 
     if (s_pixel_format == CAMERA_PF_GRAYSCALE) {
