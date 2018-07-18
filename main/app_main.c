@@ -33,6 +33,13 @@
 #include "camera.h"
 #include "bitmap.h"
 #include "http_server.h"
+#include "iot_led.h"
+
+#define CAMERA_LED_GPIO 16
+led_handle_t status_led;
+
+extern void task_initI2C(void*);
+extern void task_mpu6050(void*);
 
 
 /* The examples use simple WiFi configuration that you can set via
@@ -45,7 +52,6 @@
 #define EXAMPLE_ESP_WIFI_SSID CONFIG_ESP_WIFI_SSID
 #define EXAMPLE_ESP_WIFI_PASS CONFIG_ESP_WIFI_PASSWORD
 #define EXAMPLE_MAX_STA_CONN CONFIG_MAX_STA_CONN
-#define CAMERA_LED_GPIO 16
 
 #if EXAMPLE_ESP_WIFI_MODE_AP
 static void wifi_init_softap(void);
@@ -89,9 +95,17 @@ void app_main()
     }
 
     ESP_ERROR_CHECK(gpio_install_isr_service(0));
-    gpio_set_direction(CAMERA_LED_GPIO, GPIO_MODE_OUTPUT);
-    gpio_set_level(CAMERA_LED_GPIO, 1);
 
+    // ==================== Status LED ======================
+    status_led = iot_led_create(CAMERA_LED_GPIO, LED_DARK_LOW);
+    iot_led_state_write(status_led, LED_SLOW_BLINK);
+
+    // =================== MPU6050 Demo =====================
+    xTaskCreate(&task_initI2C, "mpu_task", 2048, NULL, 5, NULL);
+    vTaskDelay(500/portTICK_PERIOD_MS);
+    xTaskCreate(&task_mpu6050, "task_mpu6050", 8192, NULL, 5, NULL);
+
+    // ====================== Camera ========================
     camera_config_t camera_config = {
         .ledc_channel = LEDC_CHANNEL_0,
         .ledc_timer = LEDC_TIMER_0,
