@@ -2,8 +2,8 @@
 
 Code provided in this repository gets the image from camera and prints it out as ASCII art to the serial port.
 
-## M5CAMERA
-1Z实验室(1zlab): [中文文档](https://github.com/1zlab/esp-cam-tutorial)
+## M5CAMERA
+1Z实验室(1zlab): [中文文档](https://github.com/1zlab/esp-cam-tutorial)
 
 ## Build Status
 
@@ -11,7 +11,7 @@ Code provided in this repository gets the image from camera and prints it out as
 
 ## Table of Contents
 - [ESP32 Camera Demo](#esp32-camera-demo)
-  - [M5CAMERA](#m5camera%08%08)
+  - [M5CAMERA](#m5camera)
   - [Build Status](#build-status)
   - [Table of Contents](#table-of-contents)
   - [Components](#components)
