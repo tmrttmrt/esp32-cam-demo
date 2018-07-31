@@ -13,7 +13,7 @@
 #include "ov2640.h"
 #include "ov2640_regs.h"
 
-#define OPENMV2    1
+// #define OPENMV2    1
 
 #define SVGA_HSIZE     (800)
 #define SVGA_VSIZE     (600)

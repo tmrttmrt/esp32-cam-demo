@@ -83,6 +83,41 @@ static camera_pixelformat_t s_pixel_format;
 #define CAMERA_FRAME_SIZE CAMERA_FS_SVGA
 
 
+void led_pwm(int duty) {
+
+    #define LEDC_HS_TIMER          LEDC_TIMER_0
+    #define LEDC_HS_MODE           LEDC_HIGH_SPEED_MODE
+    #define LEDC_HS_CH0_GPIO       (CAMERA_LED_GPIO)
+    #define LEDC_HS_CH0_CHANNEL    LEDC_CHANNEL_0    
+    #define LEDC_TEST_DUTY         (10)
+
+    ledc_timer_config_t ledc_timer = {
+        .bit_num = LEDC_TIMER_10_BIT, // resolution of PWM duty
+        .freq_hz = 5000,              // frequency of PWM signal
+        .speed_mode = LEDC_HS_MODE,   // timer mode
+        .timer_num = LEDC_HS_TIMER    // timer index
+    };
+    // Set configuration of timer0 for high speed channels
+    ledc_timer_config(&ledc_timer);
+    
+    ledc_channel_config_t ledc_channel = 
+    {
+        .channel    = LEDC_HS_CH0_CHANNEL,
+        .duty       = 0,
+        .gpio_num   = LEDC_HS_CH0_GPIO,
+        .speed_mode = LEDC_HS_MODE,
+        .timer_sel  = LEDC_HS_TIMER
+    };
+    ledc_channel_config(&ledc_channel);
+
+    // Initialize fade service.
+    // ledc_fade_func_install(0);
+
+    ledc_set_duty(ledc_channel.speed_mode, ledc_channel.channel, duty);
+    ledc_update_duty(ledc_channel.speed_mode, ledc_channel.channel);
+}
+
+
 void app_main()
 {
     esp_log_level_set("wifi", ESP_LOG_WARN);
@@ -97,13 +132,14 @@ void app_main()
     ESP_ERROR_CHECK(gpio_install_isr_service(0));
 
     // ==================== Status LED ======================
-    status_led = iot_led_create(CAMERA_LED_GPIO, LED_DARK_LOW);
-    iot_led_state_write(status_led, LED_SLOW_BLINK);
+    // status_led = iot_led_create(CAMERA_LED_GPIO, LED_DARK_LOW);
+    // iot_led_state_write(status_led, LED_SLOW_BLINK);
+    // led_pwm(100);
 
     // =================== MPU6050 Demo =====================
-    xTaskCreate(&task_initI2C, "mpu_task", 2048, NULL, 5, NULL);
-    vTaskDelay(500/portTICK_PERIOD_MS);
-    xTaskCreate(&task_mpu6050, "task_mpu6050", 8192, NULL, 5, NULL);
+    // xTaskCreate(&task_initI2C, "mpu_task", 2048, NULL, 5, NULL);
+    // vTaskDelay(500/portTICK_PERIOD_MS);
+    // xTaskCreate(&task_mpu6050, "task_mpu6050", 8192, NULL, 5, NULL);
 
     // ====================== Camera ========================
     camera_config_t camera_config = {
