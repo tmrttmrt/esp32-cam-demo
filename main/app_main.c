@@ -33,10 +33,10 @@
 #include "camera.h"
 #include "bitmap.h"
 #include "http_server.h"
-#include "iot_led.h"
+// #include "iot_led.h"
 
-#define CAMERA_LED_GPIO 16
-led_handle_t status_led;
+#define CAMERA_LED_GPIO 14
+// led_handle_t status_led;
 
 extern void task_initI2C(void*);
 extern void task_mpu6050(void*);
@@ -83,12 +83,15 @@ static camera_pixelformat_t s_pixel_format;
 #define CAMERA_FRAME_SIZE CAMERA_FS_SVGA
 
 
+extern void reset_onoff();
+
+
 void led_pwm(int duty) {
 
-    #define LEDC_HS_TIMER          LEDC_TIMER_0
+    #define LEDC_HS_TIMER          LEDC_TIMER_2
     #define LEDC_HS_MODE           LEDC_HIGH_SPEED_MODE
     #define LEDC_HS_CH0_GPIO       (CAMERA_LED_GPIO)
-    #define LEDC_HS_CH0_CHANNEL    LEDC_CHANNEL_0    
+    #define LEDC_HS_CH0_CHANNEL    LEDC_CHANNEL_5    
     #define LEDC_TEST_DUTY         (10)
 
     ledc_timer_config_t ledc_timer = {
@@ -103,7 +106,7 @@ void led_pwm(int duty) {
     ledc_channel_config_t ledc_channel = 
     {
         .channel    = LEDC_HS_CH0_CHANNEL,
-        .duty       = 0,
+        .duty       = 900,
         .gpio_num   = LEDC_HS_CH0_GPIO,
         .speed_mode = LEDC_HS_MODE,
         .timer_sel  = LEDC_HS_TIMER
@@ -129,12 +132,17 @@ void app_main()
         ESP_ERROR_CHECK( nvs_flash_init() );
     }
 
+    reset_onoff();
+
     ESP_ERROR_CHECK(gpio_install_isr_service(0));
 
     // ==================== Status LED ======================
     // status_led = iot_led_create(CAMERA_LED_GPIO, LED_DARK_LOW);
     // iot_led_state_write(status_led, LED_SLOW_BLINK);
-    // led_pwm(100);
+    led_pwm(999);
+    // gpio_pad_select_gpio(CAMERA_LED_GPIO);
+    // gpio_set_direction(CAMERA_LED_GPIO, GPIO_MODE_OUTPUT);
+    // gpio_set_level(CAMERA_LED_GPIO, 0);
 
     // =================== MPU6050 Demo =====================
     // xTaskCreate(&task_initI2C, "mpu_task", 2048, NULL, 5, NULL);

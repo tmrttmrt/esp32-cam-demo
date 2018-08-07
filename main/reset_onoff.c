@@ -19,17 +19,17 @@
 #include "nvs.h"
 #include <stdio.h>
 
-void led_on()
-{
-    gpio_set_direction(14, GPIO_MODE_OUTPUT);
-    gpio_set_level(14, 0);
-}
+// void led_on()
+// {
+//     gpio_set_direction(14, GPIO_MODE_OUTPUT);
+//     gpio_set_level(14, 0);
+// }
 
-void led_off()
-{
-    gpio_set_direction(14, GPIO_MODE_INPUT);
-    gpio_set_pull_mode(14, GPIO_FLOATING);
-}
+// void led_off()
+// {
+//     gpio_set_direction(14, GPIO_MODE_INPUT);
+//     gpio_set_pull_mode(14, GPIO_FLOATING);
+// }
 
 
 void reset_onoff()
@@ -69,7 +69,7 @@ void reset_onoff()
         // }
 
         if (reset_cnt > 0) {
-            led_off();
+            // led_off();
             nvs_set_u8(my_handle, "reset_cnt", 0);
             err = nvs_commit(my_handle);
             // printf((err != ESP_OK) ? "Failed!\n" : "Done\n");
