@@ -262,12 +262,12 @@ esp_err_t camera_init(const camera_config_t* config)
         }
         int qp = config->jpeg_quality;
         int compression_ratio_bound;
-        if (qp >= 30) {
-            compression_ratio_bound = 5;
+        if (qp >= 20) {
+            compression_ratio_bound = 30;
         } else if (qp >= 10) {
-            compression_ratio_bound = 10;
-        } else {
             compression_ratio_bound = 20;
+        } else {
+            compression_ratio_bound = 10;
         }
         (*s_state->sensor.set_quality)(&s_state->sensor, qp);
         size_t equiv_line_count = s_state->height / compression_ratio_bound;
@@ -290,11 +290,23 @@ esp_err_t camera_init(const camera_config_t* config)
             s_state->in_bytes_per_pixel, s_state->fb_bytes_per_pixel,
             s_state->fb_size, s_state->sampling_mode,
             s_state->width, s_state->height);
-
     ESP_LOGD(TAG, "Allocating frame buffer (%d bytes)", s_state->fb_size);
     s_state->fb = (uint8_t*) calloc(s_state->fb_size, 1);
+	if (pix_format == PIXFORMAT_JPEG && s_state->fb == NULL){// 
+		size_t adj_fbsize;
+		for(int i = 11;i<20;i++){
+			adj_fbsize = (s_state->fb_size*10)/i;
+			s_state->fb = (uint8_t*) calloc(adj_fbsize, 1);
+			if(s_state->fb != NULL){
+				s_state->fb_size = adj_fbsize;
+				break;
+			}
+		}
+	}
+	ESP_LOGI(TAG, "Allocating buff size: %d", s_state->fb_size);		
     if (s_state->fb == NULL) {
-        ESP_LOGE(TAG, "Failed to allocate frame buffer");
+        ESP_LOGE(TAG, "Failed to allocate frame buffer. ");
+		ESP_LOGE(TAG, "Free heap size: %d",xPortGetFreeHeapSize());
         err = ESP_ERR_NO_MEM;
         goto fail;
     }
@@ -423,7 +435,7 @@ esp_err_t camera_run()
     struct timeval tv_end;
     gettimeofday(&tv_end, NULL);
     int time_ms = (tv_end.tv_sec - tv_start.tv_sec) * 1000 + (tv_end.tv_usec - tv_start.tv_usec) / 1000;
-    ESP_LOGI(TAG, "Frame %d done in %d ms", s_state->frame_count, time_ms);
+    ESP_LOGI(TAG, "Frame %d done in %d ms, Size: %d", s_state->frame_count, time_ms,s_state->data_size);
     s_state->frame_count++;
     return ESP_OK;
 }
@@ -709,13 +721,15 @@ static void IRAM_ATTR dma_filter_task(void *pvParameters)
         }
 
         size_t fb_pos = get_fb_pos();
-        assert(fb_pos <= s_state->fb_size + s_state->width *
-                s_state->fb_bytes_per_pixel / s_state->dma_per_line);
-
-        uint8_t* pfb = s_state->fb + fb_pos;
-        const dma_elem_t* buf = s_state->dma_buf[buf_idx];
-        lldesc_t* desc = &s_state->dma_desc[buf_idx];
-        (*s_state->dma_filter)(buf, desc, pfb);
+		if (fb_pos+s_state->width * s_state->fb_bytes_per_pixel / s_state->dma_per_line <= s_state->fb_size){
+			uint8_t* pfb = s_state->fb + fb_pos;
+			const dma_elem_t* buf = s_state->dma_buf[buf_idx];
+			lldesc_t* desc = &s_state->dma_desc[buf_idx];
+			(*s_state->dma_filter)(buf, desc, pfb);
+		} else {
+		// fame larger than buffer (jpeg case): drop the rest of the frame  
+			ESP_LOGD(TAG, "Frame truncated due to frame buffer overrun at %d ", fb_pos);
+		}
         s_state->dma_filtered_count++;
         ESP_LOGV(TAG, "dma_flt: flt_count=%d ", s_state->dma_filtered_count);
     }
