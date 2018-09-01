@@ -460,10 +460,10 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize)
     const uint8_t (*regs)[2];
     
     if (framesize <= FRAMESIZE_SVGA) {
-        clkrc =0x83;
+        clkrc =0x82;
         regs = svga_regs;
     } else {
-        clkrc =0x87;
+        clkrc =0x82;
         regs = uxga_regs;
     }
     

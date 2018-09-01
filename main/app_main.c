@@ -131,7 +131,7 @@ void app_main()
         ESP_LOGI(TAG, "Detected OV2640 camera, using JPEG format");
         s_pixel_format = CAMERA_PF_JPEG;
         camera_config.frame_size = CAMERA_FRAME_SIZE;
-        camera_config.jpeg_quality = 15;
+        camera_config.jpeg_quality = 11;
     } else {
         ESP_LOGE(TAG, "Camera not supported");
         return;
