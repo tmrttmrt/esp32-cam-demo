@@ -265,7 +265,7 @@ esp_err_t camera_init(const camera_config_t* config)
         if (qp >= 20) {
             compression_ratio_bound = 30;
         } else if (qp >= 10) {
-            compression_ratio_bound = 20;
+            compression_ratio_bound = 15;
         } else {
             compression_ratio_bound = 10;
         }
