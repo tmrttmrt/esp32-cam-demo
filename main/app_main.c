@@ -45,7 +45,7 @@
 #define EXAMPLE_ESP_WIFI_SSID CONFIG_ESP_WIFI_SSID
 #define EXAMPLE_ESP_WIFI_PASS CONFIG_ESP_WIFI_PASSWORD
 #define EXAMPLE_MAX_STA_CONN CONFIG_MAX_STA_CONN
-#define CAMERA_LED_GPIO 16
+#define CAMERA_LED_GPIO 13 //Conflict with SD DATA3
 
 #if EXAMPLE_ESP_WIFI_MODE_AP
 static void wifi_init_softap(void);
@@ -75,7 +75,7 @@ static ip4_addr_t s_ip_addr;
 static camera_pixelformat_t s_pixel_format;
 
 #define CAMERA_PIXEL_FORMAT CAMERA_PF_GRAYSCALE
-#define CAMERA_FRAME_SIZE CAMERA_FS_SXGA
+#define CAMERA_FRAME_SIZE CAMERA_FS_UXGA
 
 
 void app_main()
@@ -115,6 +115,7 @@ void app_main()
     };
 
     camera_model_t camera_model;
+	ESP_LOGI(TAG, "Free heap size: %d",xPortGetFreeHeapSize());	
     err = camera_probe(&camera_config, &camera_model);
     if (err != ESP_OK) {
         ESP_LOGE(TAG, "Camera probe failed with error 0x%x", err);
@@ -131,7 +132,7 @@ void app_main()
         ESP_LOGI(TAG, "Detected OV2640 camera, using JPEG format");
         s_pixel_format = CAMERA_PF_JPEG;
         camera_config.frame_size = CAMERA_FRAME_SIZE;
-        camera_config.jpeg_quality = 11;
+        camera_config.jpeg_quality = 3;
     } else {
         ESP_LOGE(TAG, "Camera not supported");
         return;

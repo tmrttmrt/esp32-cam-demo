@@ -36,6 +36,7 @@
 #include "camera.h"
 #include "camera_common.h"
 #include "xclk.h"
+#include "twi.h"
 #if CONFIG_OV2640_SUPPORT
 #include "ov2640.h"
 #endif
@@ -115,77 +116,84 @@ static void vsync_intr_enable()
 }
 
 
-esp_err_t camera_probe(const camera_config_t* config, camera_model_t* out_camera_model)
-{
-    if (s_state != NULL) {
-        return ESP_ERR_INVALID_STATE;
-    }
+esp_err_t camera_probe(const camera_config_t* config,
+		camera_model_t* out_camera_model) {
+	if (s_state != NULL) {
+		return ESP_ERR_INVALID_STATE;
+	}
 
-    s_state = (camera_state_t*) calloc(sizeof(*s_state), 1);
-    if (!s_state) {
-        return ESP_ERR_NO_MEM;
-    }
+	s_state = (camera_state_t*) calloc(sizeof(*s_state), 1);
+	if (!s_state) {
+		return ESP_ERR_NO_MEM;
+	}
 
-    ESP_LOGD(TAG, "Enabling XCLK output");
-    camera_enable_out_clock(config);
+	ESP_LOGD(TAG, "Enabling XCLK output");
+	camera_enable_out_clock(config);
 
-    ESP_LOGD(TAG, "Initializing SSCB");
-    SCCB_Init(config->pin_sscb_sda, config->pin_sscb_scl);
+	ESP_LOGD(TAG, "Initializing SSCB");
+	SCCB_Init(config->pin_sscb_sda, config->pin_sscb_scl);
 
-    ESP_LOGD(TAG, "Resetting camera");
-    gpio_config_t conf = { 0 };
-    conf.pin_bit_mask = 1LL << config->pin_reset;
-    conf.mode = GPIO_MODE_OUTPUT;
-    gpio_config(&conf);
+	ESP_LOGD(TAG, "Resetting camera");
+	gpio_config_t conf = { 0 };
+	conf.pin_bit_mask = 1LL << config->pin_reset;
+	conf.mode = GPIO_MODE_OUTPUT;
+	gpio_config(&conf);
 
-    gpio_set_level(config->pin_reset, 0);
-    delay(10);
-    gpio_set_level(config->pin_reset, 1);
-    delay(10);
+	gpio_set_level(config->pin_reset, 1);
+	delay(3000);
 
-    ESP_LOGD(TAG, "Searching for camera address");
-    /* Probe the sensor */
-    delay(10);
-    uint8_t slv_addr = SCCB_Probe();
-    if (slv_addr == 0) {
-        *out_camera_model = CAMERA_NONE;
-        return ESP_ERR_CAMERA_NOT_DETECTED;
-    }
-    s_state->sensor.slv_addr = slv_addr;
-    ESP_LOGD(TAG, "Detected camera at address=0x%02x", slv_addr);
-    sensor_id_t* id = &s_state->sensor.id;
-    id->PID = SCCB_Read(slv_addr, REG_PID);
-    id->VER = SCCB_Read(slv_addr, REG_VER);
-    id->MIDL = SCCB_Read(slv_addr, REG_MIDL);
-    id->MIDH = SCCB_Read(slv_addr, REG_MIDH);
-    delay(10);
-    ESP_LOGD(TAG, "Camera PID=0x%02x VER=0x%02x MIDL=0x%02x MIDH=0x%02x",
-            id->PID, id->VER, id->MIDH, id->MIDL);
+	gpio_set_level(config->pin_reset, 0);
+	delay(1000);
 
-    switch (id->PID) {
 #if CONFIG_OV2640_SUPPORT
-        case OV2640_PID:
-            *out_camera_model = CAMERA_OV2640;
-            ov2640_init(&s_state->sensor);
-            break;
+	uint8_t buf[] = {0xff, 0x01};
+	twi_writeTo(0x30, buf, 2, true);
+#endif
+
+	ESP_LOGD(TAG, "Searching for camera address");
+	/* Probe the sensor */
+	delay(10);
+	uint8_t slv_addr = SCCB_Probe();
+	if (slv_addr == 0) {
+		*out_camera_model = CAMERA_NONE;
+		return ESP_ERR_CAMERA_NOT_DETECTED;
+	}
+	s_state->sensor.slv_addr = slv_addr;
+	ESP_LOGD(TAG, "Detected camera at address=0x%02x", slv_addr);
+	sensor_id_t* id = &s_state->sensor.id;
+	id->PID = SCCB_Read(slv_addr, REG_PID);
+	id->VER = SCCB_Read(slv_addr, REG_VER);
+	id->MIDL = SCCB_Read(slv_addr, REG_MIDL);
+	id->MIDH = SCCB_Read(slv_addr, REG_MIDH);
+	delay(10);
+	ESP_LOGD(TAG, "Camera PID=0x%02x VER=0x%02x MIDL=0x%02x MIDH=0x%02x",
+			id->PID, id->VER, id->MIDH, id->MIDL);
+
+	switch (id->PID) {
+#if CONFIG_OV2640_SUPPORT
+	case OV2640_PID:
+	*out_camera_model = CAMERA_OV2640;
+	ov2640_init(&s_state->sensor);
+	break;
 #endif
 #if CONFIG_OV7725_SUPPORT
-        case OV7725_PID:
-            *out_camera_model = CAMERA_OV7725;
-            ov7725_init(&s_state->sensor);
-            break;
+	case OV7725_PID:
+	*out_camera_model = CAMERA_OV7725;
+	ov7725_init(&s_state->sensor);
+	break;
 #endif
-        default:
-            id->PID = 0;
-            *out_camera_model = CAMERA_UNKNOWN;
-            ESP_LOGD(TAG, "Detected camera not supported.");
-            return ESP_ERR_CAMERA_NOT_SUPPORTED;
-    }
+	default:
+		id->PID = 0;
+		*out_camera_model = CAMERA_UNKNOWN;
+		ESP_LOGD(TAG, "Detected camera not supported.")
+		;
+		return ESP_ERR_CAMERA_NOT_SUPPORTED;
+	}
 
-    ESP_LOGD(TAG, "Doing SW reset of sensor");
-    s_state->sensor.reset(&s_state->sensor);
+	ESP_LOGD(TAG, "Doing SW reset of sensor");
+	s_state->sensor.reset(&s_state->sensor);
 
-    return ESP_OK;
+	return ESP_OK;
 }
 
 esp_err_t camera_init(const camera_config_t* config)
@@ -266,8 +274,10 @@ esp_err_t camera_init(const camera_config_t* config)
             compression_ratio_bound = 30;
         } else if (qp >= 10) {
             compression_ratio_bound = 15;
-        } else {
+        } else if (qp >= 6) {
             compression_ratio_bound = 10;
+        } else {
+            compression_ratio_bound = 5;
         }
         (*s_state->sensor.set_quality)(&s_state->sensor, qp);
         size_t equiv_line_count = s_state->height / compression_ratio_bound;
@@ -290,8 +300,11 @@ esp_err_t camera_init(const camera_config_t* config)
             s_state->in_bytes_per_pixel, s_state->fb_bytes_per_pixel,
             s_state->fb_size, s_state->sampling_mode,
             s_state->width, s_state->height);
-    ESP_LOGD(TAG, "Allocating frame buffer (%d bytes)", s_state->fb_size);
+	ESP_LOGI(TAG, "Free heap size: %d",xPortGetFreeHeapSize());
+	s_state->fb=NULL;
+    ESP_LOGI(TAG, "Allocating frame buffer (%d bytes)", s_state->fb_size);
     s_state->fb = (uint8_t*) calloc(s_state->fb_size, 1);
+	ESP_LOGI(TAG, "Frame buffer (%d bytes) allocated.", s_state->fb_size);
 	if (pix_format == PIXFORMAT_JPEG && s_state->fb == NULL){// 
 		size_t adj_fbsize;
 		for(int i = 11;i<20;i++){
@@ -299,6 +312,7 @@ esp_err_t camera_init(const camera_config_t* config)
 			s_state->fb = (uint8_t*) calloc(adj_fbsize, 1);
 			if(s_state->fb != NULL){
 				s_state->fb_size = adj_fbsize;
+				ESP_LOGI(TAG, "Allocating smaller frame buffer (%d bytes)", s_state->fb_size);
 				break;
 			}
 		}
